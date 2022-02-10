@@ -34,20 +34,23 @@ RTF_ACTIVATION_DATA="" RTF_MULE_LICENSE="" VAGRANT_EXPERIMENTAL="1" vagrant up
 #### Installing the controller
 
 ```shell
-./scripts/provision-controller.sh
+./scripts/1-provision-controller.sh
 ```
 
 #### Installing the workers
 
 ```shell
-./scripts/provision-workers.sh
+./scripts/2-provision-workers.sh
 ```
 
 #### Activating the persistence gateway
 
 ```shell
-./scripts/provision-persistence-gateway.sh
+./scripts/3-provision-persistence-gateway.sh
 ```
 
-#### 
+### Installation checkpoint
 
+```shell
+./scripts/4-health-check.sh
+```

@@ -17,8 +17,8 @@ RTF_MULE_LICENSE = ENV['RTF_MULE_LICENSE']
 
 Vagrant.configure("2") do |config|
 
-	config.vm.provision "shell", inline: $set_environment_variables, run: 'always'
-	config.vm.provision "shell", inline: $ensure_init_script, run: 'always'
+	config.vm.provision "shell", inline: $set_environment_variables, run: 'once'
+	config.vm.provision "shell", inline: $ensure_init_script, run: 'once'
 
 	config.vm.disk :disk, size: "20GB", name: "docker_storage"
 
@@ -32,7 +32,7 @@ Vagrant.configure("2") do |config|
 		end
 
 		controller.vm.disk :disk, size: "5GB", name: "etcd_storage"
-		controller.vm.provision "shell", inline: $ensure_controller_env, run: 'always', args: ["#{RTF_NETWORK_PREFIX}.10", "#{RTF_ACTIVATION_DATA}", "#{RTF_MULE_LICENSE}"]
+		controller.vm.provision "shell", inline: $ensure_controller_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.10", "#{RTF_ACTIVATION_DATA}", "#{RTF_MULE_LICENSE}"]
 		controller.vm.network "forwarded_port", guest: 32009, host: 32009
     end
 
@@ -46,7 +46,7 @@ Vagrant.configure("2") do |config|
 				vb.memory = 1024
 	    	end
 
-	    	persistence_gateway.vm.provision "shell", inline: $ensure_persistence_gateway, run: 'always'
+	    	persistence_gateway.vm.provision "shell", inline: $ensure_persistence_gateway, run: 'once'
     	end
     end
 
@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
 				vb.memory = WORKER_MEMORY
 	    	end
 
-	    	worker.vm.provision "shell", inline: $ensure_worker_env, run: 'always', args: ["#{RTF_NETWORK_PREFIX}.1#{id}", "#{RTF_NETWORK_PREFIX}.10"]
+	    	worker.vm.provision "shell", inline: $ensure_worker_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.1#{id}", "#{RTF_NETWORK_PREFIX}.10"]
     	end
 	end
 end
@@ -141,6 +141,7 @@ postgresql-setup --initdb
 systemctl enable postgresql
 systemctl start postgresql
 sudo -u postgres createuser pg
+sudo -u postgres psql -c "ALTER USER pg WITH PASSWORD 'pg';"
 sudo -u postgres psql -c 'create database pg;'
 sudo -u postgres psql -c 'grant all privileges on database pg to pg;'
 SCRIPT

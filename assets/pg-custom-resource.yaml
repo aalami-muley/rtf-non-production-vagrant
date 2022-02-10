@@ -1,0 +1,19 @@
+apiVersion: rtf.mulesoft.com/v1
+kind: PersistenceGateway
+metadata:
+  name: default
+  namespace: rtf
+spec:
+  objectStore:
+    backendDriver: postgresql
+    maxBackendConnectionPool: 20
+    replicas: 2
+    secretRef:
+      name: persistence-gateway-credentials
+    resources:
+      limits:
+        cpu: 250m
+        memory: 250Mi
+      requests:
+        cpu: 200m
+        memory: 75Mi
