@@ -1,4 +1,6 @@
-BOX = "centos/stream8"
+ENV['VAGRANT_EXPERIMENTAL'] = "disks"
+
+BOX = "ubuntu/bionic64"
 
 CONTROLLER_CPU = ENV['CONTROLLER_CPU'] || 2
 CONTROLLER_MEMORY = ENV['CONTROLLER_MEMORY'] || 8192
@@ -20,7 +22,7 @@ Vagrant.configure("2") do |config|
 	config.vm.provision "shell", inline: $set_environment_variables, run: 'once'
 	config.vm.provision "shell", inline: $ensure_init_script, run: 'once'
 
-	config.vm.disk :disk, size: "20GB", name: "docker_storage"
+	config.vm.disk :disk, size: "50GB", name: "docker_storage"
 
 	config.vm.define "controller" do |controller|
 		controller.vm.box = BOX
@@ -36,20 +38,6 @@ Vagrant.configure("2") do |config|
 		controller.vm.network "forwarded_port", guest: 32009, host: 32009
     end
 
-    if RTF_PERSISTENCE_GATEWAY == "1" then
-    	config.vm.define "persistence-gateway" do |persistence_gateway|
-	    	persistence_gateway.vm.box = BOX
-			persistence_gateway.vm.hostname = "#{NODE_NAME_PREFIX}-persistence-gateway"
-			persistence_gateway.vm.network "private_network", ip: "#{RTF_NETWORK_PREFIX}.20"
-			persistence_gateway.vm.provider "virtualbox" do |vb|
-				vb.cpus = 1
-				vb.memory = 1024
-	    	end
-
-	    	persistence_gateway.vm.provision "shell", inline: $ensure_persistence_gateway, run: 'once'
-    	end
-    end
-
     (1..WORKERS).each do |id|
     	config.vm.define "worker-#{id}" do |worker|
 	    	worker.vm.box = BOX
@@ -63,6 +51,20 @@ Vagrant.configure("2") do |config|
 	    	worker.vm.provision "shell", inline: $ensure_worker_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.1#{id}", "#{RTF_NETWORK_PREFIX}.10"]
     	end
 	end
+
+    if RTF_PERSISTENCE_GATEWAY == "1" then
+    	config.vm.define "persistence-gateway" do |persistence_gateway|
+	    	persistence_gateway.vm.box = BOX
+			persistence_gateway.vm.hostname = "#{NODE_NAME_PREFIX}-persistence-gateway"
+			persistence_gateway.vm.network "private_network", ip: "#{RTF_NETWORK_PREFIX}.20"
+			persistence_gateway.vm.provider "virtualbox" do |vb|
+				vb.cpus = 1
+				vb.memory = 1024
+	    	end
+
+	    	persistence_gateway.vm.provision "shell", inline: $ensure_persistence_gateway, run: 'once'
+    	end
+    end
 end
 
 $set_environment_variables = <<SCRIPT
@@ -77,9 +79,7 @@ EOF
 SCRIPT
 
 $ensure_init_script = <<SCRIPT
-setenforce 0
-sed -i 's/SELINUX=\(enforcing\|permissive\)/SELINUX=disabled/g' /etc/selinux/config
-yum install unzip -y
+apt-get install unzip -y
 curl https://runtime-fabric-eu.s3.amazonaws.com/install-scripts/rtf-install-scripts-20220112-f8b0e44.zip -s --output rtf-install-scripts.zip
 unzip -o rtf-install-scripts.zip -d rtf-install-scripts
 mkdir -p /opt/anypoint/runtimefabric && cp ./rtf-install-scripts/scripts/init.sh /opt/anypoint/runtimefabric/init.sh && chmod +x /opt/anypoint/runtimefabric/init.sh
@@ -89,23 +89,25 @@ SCRIPT
 $ensure_controller_env = <<SCRIPT
 cat > /opt/anypoint/runtimefabric/env <<EOF 
 	RTF_PRIVATE_IP=${1}
-	RTF_NODE_ROLE=controller_node 
-	RTF_INSTALL_ROLE=leader 
-	RTF_INSTALL_PACKAGE_URL= 
-	RTF_ETCD_DEVICE=/dev/sdc 
-	RTF_DOCKER_DEVICE=/dev/sdb 
-	RTF_TOKEN='my-cluster-token' 
-	RTF_NAME='runtime-fabric' 
-	RTF_ACTIVATION_DATA='${2}' 
-	RTF_MULE_LICENSE='${3}' 
-	RTF_HTTP_PROXY='' 
-	RTF_NO_PROXY='' 
-	RTF_MONITORING_PROXY='' 
-	RTF_SERVICE_UID='1000' 
-	RTF_SERVICE_GID='1000' 
-	POD_NETWORK_CIDR='10.244.0.0/16' 
-	SERVICE_CIDR='10.100.0.0/16' 
-	DISABLE_SELINUX='false' 
+	RTF_NODE_ROLE=controller_node
+	RTF_INSTALL_ROLE=leader
+	RTF_INSTALL_PACKAGE_URL=
+	RTF_DOCKER_DEVICE=/dev/sdc
+	RTF_ETCD_DEVICE=/dev/sdd
+	RTF_TOKEN='my-cluster-token'
+	RTF_NAME='runtime-fabric'
+	RTF_ACTIVATION_DATA='${2}'
+	RTF_MULE_LICENSE='${3}'
+	RTF_HTTP_PROXY=''
+	RTF_NO_PROXY=''
+	RTF_MONITORING_PROXY=''
+	RTF_SERVICE_UID='1000'
+	RTF_SERVICE_GID='1000'
+	POD_NETWORK_CIDR='10.244.0.0/16'
+	SERVICE_CIDR='10.100.0.0/16'
+	DISABLE_SELINUX='false'
+	RTF_DOCKER_DEVICE_SIZE=50G
+	RTF_ETCD_DEVICE_SIZE=5G
 EOF
 SCRIPT
 
@@ -113,21 +115,21 @@ $ensure_worker_env = <<SCRIPT
 cat > /opt/anypoint/runtimefabric/env <<EOF 
 	RTF_PRIVATE_IP=${1}
 	RTF_NODE_ROLE=worker_node 
-	RTF_INSTALL_ROLE=joiner 
-	RTF_DOCKER_DEVICE=/dev/sdb 
-	RTF_TOKEN='my-cluster-token' 
+	RTF_INSTALL_ROLE=joiner
+	RTF_DOCKER_DEVICE=/dev/sdc
+	RTF_TOKEN='my-cluster-token'
 	RTF_INSTALLER_IP=${2}
-	RTF_HTTP_PROXY='' 
-	RTF_NO_PROXY='' 
-	RTF_MONITORING_PROXY='' 
-	RTF_SERVICE_UID='1000' 
-	RTF_SERVICE_GID='1000' 
-	POD_NETWORK_CIDR='10.244.0.0/16' 
-	SERVICE_CIDR='10.100.0.0/16' 
-	DISABLE_SELINUX='false' 
+	RTF_HTTP_PROXY=''
+	RTF_NO_PROXY=''
+	RTF_MONITORING_PROXY=''
+	RTF_SERVICE_UID='1000'
+	RTF_SERVICE_GID='1000'
+	POD_NETWORK_CIDR='10.244.0.0/16'
+	SERVICE_CIDR='10.100.0.0/16'
+	DISABLE_SELINUX='false'
+	RTF_DOCKER_DEVICE_SIZE=50G
 EOF
 SCRIPT
-
 
 $install_rtfctl = <<SCRIPT
 curl -L https://anypoint.mulesoft.com/runtimefabric/api/download/rtfctl/latest -o rtfctl
@@ -135,8 +137,7 @@ sudo chmod +x rtfctl
 SCRIPT
 
 $ensure_persistence_gateway = <<SCRIPT
-dnf module enable postgresql:9.6 -y
-dnf install postgresql-server -y
+apt install postgresql postgresql-contrib -y
 postgresql-setup --initdb
 systemctl enable postgresql
 systemctl start postgresql
