@@ -22,8 +22,6 @@ Vagrant.configure("2") do |config|
 	config.vm.provision "shell", inline: $set_environment_variables, run: 'once'
 	config.vm.provision "shell", inline: $ensure_init_script, run: 'once'
 
-	config.vm.disk :disk, size: "50GB", name: "docker_storage"
-
 	config.vm.define "controller" do |controller|
 		controller.vm.box = BOX
 		controller.vm.hostname = "#{NODE_NAME_PREFIX}-controller"
@@ -33,6 +31,7 @@ Vagrant.configure("2") do |config|
 			vb.memory = CONTROLLER_MEMORY
 		end
 
+		controller.vm.disk :disk, size: "50GB", name: "docker_storage"
 		controller.vm.disk :disk, size: "5GB", name: "etcd_storage"
 		controller.vm.provision "shell", inline: $ensure_controller_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.10", "#{RTF_ACTIVATION_DATA}", "#{RTF_MULE_LICENSE}"]
 		controller.vm.network "forwarded_port", guest: 32009, host: 32009
@@ -48,7 +47,8 @@ Vagrant.configure("2") do |config|
 				vb.memory = WORKER_MEMORY
 	    	end
 
-	    	worker.vm.provision "shell", inline: $ensure_worker_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.1#{id}", "#{RTF_NETWORK_PREFIX}.10"]
+			worker.vm.disk :disk, size: "50GB", name: "docker_storage"
+			worker.vm.provision "shell", inline: $ensure_worker_env, run: 'once', args: ["#{RTF_NETWORK_PREFIX}.1#{id}", "#{RTF_NETWORK_PREFIX}.10"]
     	end
 	end
 
@@ -137,7 +137,7 @@ sudo chmod +x rtfctl
 SCRIPT
 
 $ensure_persistence_gateway = <<SCRIPT
-apt install postgresql postgresql-contrib -y
+apt install postgresql-10 -y
 postgresql-setup --initdb
 systemctl enable postgresql
 systemctl start postgresql
@@ -145,4 +145,8 @@ sudo -u postgres createuser pg
 sudo -u postgres psql -c "ALTER USER pg WITH PASSWORD 'pg';"
 sudo -u postgres psql -c 'create database pg;'
 sudo -u postgres psql -c 'grant all privileges on database pg to pg;'
+echo "listen_addresses = '*'" >> /etc/postgresql/10/main/postgresql.conf
+echo "host    all             all              0.0.0.0/0                       md5" >> /etc/postgresql/10/main/pg_hba.conf
+echo "host    all             all              ::/0                            md5" >> /etc/postgresql/10/main/pg_hba.conf
+systemctl restart postgresql
 SCRIPT

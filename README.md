@@ -20,23 +20,19 @@ The Vagrant definition has a number of settings that can be configured by enviro
 
 ## Installation steps
 First, the cluster's machines should be provisionned, then the cluster can be installed in the controller node then in the workers nodes.
+
 ### Provisioning the machines
 
-Vagrant Experimental Feature Flag should be enabled to manage and configure virtual hard disks for etcd and docker.
+Vagrant Experimental Feature Flag is enabled explicitly configure virtual hard disks for etcd and docker.
 
 The activation data and the Mule licence should be provided in the command line. Below an example using the default settings.
 
 ```shell
-RTF_ACTIVATION_DATA="" RTF_MULE_LICENSE="" VAGRANT_EXPERIMENTAL="1" vagrant up
+RTF_ACTIVATION_DATA="" RTF_MULE_LICENSE="" vagrant up
 ```
 
-Provisioning the guest will take few minutes
-
-CentOS Linux 8 had reached the End Of Life (EOL) on December 31st, 2021. It means that CentOS 8 will no longer receive development resources from the official CentOS project. After Dec 31st, 2021, if you need to update your CentOS, you need to change the mirrors to vault.centos.org where they will be archived permanently. Alternatively, you may want to upgrade to CentOS Stream.
-
-
-
 ### Installing the cluster
+
 #### Installing the controller
 
 ```shell
